@@ -1,13 +1,27 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { TaskProvider } from '@/context/TaskContext';
+import LoginForm from '@/components/LoginForm';
+import TaskBoard from '@/components/TaskBoard';
+import Header from '@/components/Header';
 
 const Index = () => {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <LoginForm />;
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <TaskProvider>
+      <div className="min-h-screen bg-slate-100">
+        <Header />
+        <main className="container mx-auto">
+          <TaskBoard />
+        </main>
       </div>
-    </div>
+    </TaskProvider>
   );
 };
 
