@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useTaskContext } from '@/context/TaskContext';
-import { Task } from '@/types/task';
+import { Task, TaskStatus } from '@/types/task';
 import {
   Table,
   TableBody,
@@ -30,10 +30,12 @@ const TaskList: React.FC<TaskListProps> = ({ onTaskClick }) => {
   const tasks = Object.values(filteredTasks);
   
   const handleTaskStatusChange = (task: Task) => {
+    const newStatus: TaskStatus = task.status === 'done' ? 'todo' : 'done';
+    
     const updatedTask = {
       ...task,
-      status: task.status === 'done' ? 'todo' : 'done',
-      completedAt: task.status !== 'done' ? new Date().toISOString() : undefined,
+      status: newStatus,
+      completedAt: newStatus === 'done' ? new Date().toISOString() : undefined,
       updatedAt: new Date().toISOString()
     };
     
