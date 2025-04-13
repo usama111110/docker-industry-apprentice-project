@@ -4,7 +4,8 @@ import { Task } from '@/types/task';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Clock, Flag } from 'lucide-react';
+import { CheckSquare, Clock, Flag, ListChecks } from 'lucide-react';
+import { getDueDateStatus } from '@/utils/taskUtils';
 
 interface TaskCardProps {
   task: Task;
@@ -18,6 +19,13 @@ const priorityColors = {
 };
 
 const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
+  const dueDateStatus = task.dueDate ? getDueDateStatus(task.dueDate) : 'none';
+  
+  // Calculate subtask completion
+  const completedSubtasks = task.subtasks?.filter(subtask => subtask.completed).length || 0;
+  const totalSubtasks = task.subtasks?.length || 0;
+  const hasSubtasks = totalSubtasks > 0;
+
   return (
     <Card 
       className="mb-2 cursor-pointer hover:shadow-md transition-shadow animate-fade-in" 
@@ -27,13 +35,34 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
         <div className="space-y-2">
           <h3 className="font-semibold text-sm truncate">{task.title}</h3>
           
-          <p className="text-xs text-gray-500 line-clamp-2">{task.description}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
           
-          {task.dueDate && (
-            <div className="flex items-center text-xs text-gray-500">
-              <Clock className="h-3 w-3 mr-1" />
+          {/* Subtasks progress */}
+          {hasSubtasks && (
+            <div className="flex items-center text-xs text-muted-foreground">
+              <ListChecks className="h-3 w-3 mr-1" />
               <span>
+                {completedSubtasks}/{totalSubtasks} completed
+              </span>
+            </div>
+          )}
+          
+          {/* Due date with status-based styling */}
+          {task.dueDate && (
+            <div className="flex items-center text-xs">
+              <Clock className={`h-3 w-3 mr-1 ${
+                dueDateStatus === 'overdue' ? 'text-red-500' : 
+                dueDateStatus === 'today' ? 'text-amber-500' : 
+                'text-muted-foreground'
+              }`} />
+              <span className={
+                dueDateStatus === 'overdue' ? 'text-red-500' : 
+                dueDateStatus === 'today' ? 'text-amber-500' : 
+                'text-muted-foreground'
+              }>
                 {format(new Date(task.dueDate), 'MMM d')}
+                {dueDateStatus === 'overdue' && ' (overdue)'}
+                {dueDateStatus === 'today' && ' (today)'}
               </span>
             </div>
           )}
@@ -64,6 +93,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
               {task.priority}
             </Badge>
           </div>
+          
+          {/* Show completed mark if the task is done */}
+          {task.status === 'done' && (
+            <div className="absolute top-2 right-2">
+              <CheckSquare className="h-4 w-4 text-green-500" />
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

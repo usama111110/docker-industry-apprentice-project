@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Task, TaskPriority, TaskStatus } from '@/types/task';
+import { Task, TaskPriority, TaskStatus, Subtask } from '@/types/task';
 import { useTaskContext } from '@/context/TaskContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Trash2, Plus, CheckCircle2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface TaskDialogProps {
   taskId: string | null;
@@ -33,10 +34,12 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ taskId, isOpen, onClose }) => {
     tags: [],
     createdAt: '',
     updatedAt: '',
+    subtasks: [],
   };
   
   const [formData, setFormData] = useState<Task>(emptyTask);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [newSubtask, setNewSubtask] = useState('');
   
   const isNewTask = !taskId;
   
@@ -56,6 +59,7 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ taskId, isOpen, onClose }) => {
         id: uuidv4(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        subtasks: [],
       });
       setSelectedDate(undefined);
     }
@@ -92,6 +96,42 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ taskId, isOpen, onClose }) => {
       dueDate: date ? date.toISOString() : undefined,
     }));
   };
+
+  const handleAddSubtask = () => {
+    if (!newSubtask.trim()) return;
+    
+    const subtask: Subtask = {
+      id: uuidv4(),
+      title: newSubtask,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    };
+    
+    setFormData(prev => ({
+      ...prev,
+      subtasks: [...(prev.subtasks || []), subtask],
+    }));
+    
+    setNewSubtask('');
+  };
+
+  const handleSubtaskToggle = (subtaskId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      subtasks: prev.subtasks?.map(subtask => 
+        subtask.id === subtaskId 
+          ? { ...subtask, completed: !subtask.completed } 
+          : subtask
+      ),
+    }));
+  };
+
+  const handleRemoveSubtask = (subtaskId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      subtasks: prev.subtasks?.filter(subtask => subtask.id !== subtaskId),
+    }));
+  };
   
   const handleSubmit = () => {
     const now = new Date().toISOString();
@@ -99,6 +139,13 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ taskId, isOpen, onClose }) => {
       ...formData,
       updatedAt: now,
     };
+    
+    // If status is changed to 'done', set completedAt
+    if (updatedTask.status === 'done' && !updatedTask.completedAt) {
+      updatedTask.completedAt = now;
+    } else if (updatedTask.status !== 'done') {
+      updatedTask.completedAt = undefined;
+    }
     
     if (isNewTask) {
       dispatch({ type: 'ADD_TASK', payload: updatedTask });
@@ -118,7 +165,7 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ taskId, isOpen, onClose }) => {
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isNewTask ? 'Add New Task' : 'Edit Task'}</DialogTitle>
         </DialogHeader>
@@ -230,6 +277,56 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ taskId, isOpen, onClose }) => {
                   {tag.name}
                 </Badge>
               ))}
+            </div>
+          </div>
+
+          {/* Subtasks section */}
+          <div className="grid gap-2 mt-2">
+            <Label>Subtasks</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add a subtask"
+                value={newSubtask}
+                onChange={(e) => setNewSubtask(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+              />
+              <Button variant="outline" size="icon" onClick={handleAddSubtask}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-2 mt-2">
+              {formData.subtasks && formData.subtasks.length > 0 ? (
+                <div className="rounded-md border divide-y">
+                  {formData.subtasks.map((subtask) => (
+                    <div key={subtask.id} className="flex items-center gap-2 p-2">
+                      <Checkbox
+                        checked={subtask.completed}
+                        onCheckedChange={() => handleSubtaskToggle(subtask.id)}
+                        id={`subtask-${subtask.id}`}
+                      />
+                      <Label
+                        htmlFor={`subtask-${subtask.id}`}
+                        className={`flex-grow text-sm ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}
+                      >
+                        {subtask.title}
+                      </Label>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => handleRemoveSubtask(subtask.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground text-center py-2">
+                  No subtasks yet
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -9,6 +9,13 @@ export interface TaskTag {
   color: string;
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+  createdAt: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -20,6 +27,9 @@ export interface Task {
   updatedAt: string;
   dueDate?: string;
   assignee?: string;
+  subtasks?: Subtask[];
+  completedAt?: string;
+  estimatedTime?: number; // in minutes
 }
 
 export interface Column {
@@ -32,4 +42,30 @@ export interface BoardState {
   tasks: { [key: string]: Task };
   columns: { [key: string]: Column };
   columnOrder: TaskStatus[];
+}
+
+export interface UserSettings {
+  theme: 'light' | 'dark' | 'system';
+  compactView: boolean;
+  showCompletedTasks: boolean;
+  defaultTaskView: 'board' | 'list';
+  notifications: boolean;
+}
+
+export interface TaskFilter {
+  search: string;
+  priority?: TaskPriority[];
+  tags?: string[];
+  dueDate?: 'today' | 'this-week' | 'overdue' | 'no-date' | null;
+  assignee?: string | null;
+}
+
+export interface TaskStatistics {
+  totalTasks: number;
+  completedTasks: number;
+  dueSoonTasks: number;
+  overdueTasks: number;
+  tasksByStatus: Record<TaskStatus, number>;
+  tasksByPriority: Record<TaskPriority, number>;
+  recentlyCompletedTasks: Task[];
 }

@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { Task, TaskStatus, BoardState, TaskTag, TaskPriority } from '@/types/task';
+import { Task, TaskStatus, BoardState, TaskTag, TaskPriority, Subtask } from '@/types/task';
 
 // Initial sample tags
 const sampleTags: TaskTag[] = [
@@ -10,6 +10,20 @@ const sampleTags: TaskTag[] = [
   { id: 'tag4', name: 'Feature', color: '#8B5CF6' },
   { id: 'tag5', name: 'Documentation', color: '#F59E0B' },
 ];
+
+// Sample subtasks
+const createSubtasks = (count: number): Subtask[] => {
+  const subtasks: Subtask[] = [];
+  for (let i = 0; i < count; i++) {
+    subtasks.push({
+      id: `subtask-${i}`,
+      title: `Subtask ${i + 1}`,
+      completed: Math.random() > 0.5,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * Math.floor(Math.random() * 10)).toISOString(),
+    });
+  }
+  return subtasks;
+};
 
 // Initial sample tasks
 const initialTasks: { [key: string]: Task } = {
@@ -23,6 +37,7 @@ const initialTasks: { [key: string]: Task } = {
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
     dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString(),
+    subtasks: createSubtasks(3),
   },
   'task-2': {
     id: 'task-2',
@@ -33,6 +48,7 @@ const initialTasks: { [key: string]: Task } = {
     tags: [sampleTags[0], sampleTags[4]],
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(),
+    subtasks: createSubtasks(2),
   },
   'task-3': {
     id: 'task-3',
@@ -44,6 +60,7 @@ const initialTasks: { [key: string]: Task } = {
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(),
     dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 1).toISOString(),
+    subtasks: createSubtasks(0),
   },
   'task-4': {
     id: 'task-4',
@@ -54,6 +71,7 @@ const initialTasks: { [key: string]: Task } = {
     tags: [sampleTags[0], sampleTags[1]],
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(),
+    subtasks: createSubtasks(4),
   },
   'task-5': {
     id: 'task-5',
@@ -64,6 +82,7 @@ const initialTasks: { [key: string]: Task } = {
     tags: [sampleTags[1], sampleTags[4]],
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+    subtasks: createSubtasks(1),
   },
   'task-6': {
     id: 'task-6',
@@ -74,6 +93,8 @@ const initialTasks: { [key: string]: Task } = {
     tags: [sampleTags[1]],
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+    completedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+    subtasks: createSubtasks(2),
   },
   'task-7': {
     id: 'task-7',
@@ -84,6 +105,8 @@ const initialTasks: { [key: string]: Task } = {
     tags: [sampleTags[0], sampleTags[4]],
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 12).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
+    completedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
+    subtasks: createSubtasks(3),
   },
 };
 
@@ -120,7 +143,8 @@ type TaskAction =
   | { type: 'UPDATE_TASK'; payload: Task }
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'MOVE_TASK'; payload: { taskId: string; sourceColId: TaskStatus; destColId: TaskStatus; newIndex: number } }
-  | { type: 'SET_SEARCH_TERM'; payload: string };
+  | { type: 'SET_SEARCH_TERM'; payload: string }
+  | { type: 'UPDATE_SUBTASK'; payload: { taskId: string; subtaskId: string; completed: boolean } };
 
 interface TaskContextProps {
   state: BoardState;
@@ -136,7 +160,7 @@ const taskReducer = (state: BoardState, action: TaskAction): BoardState => {
   switch (action.type) {
     case 'ADD_TASK': {
       const task = action.payload;
-      // Add task to the 'todo' column by default
+      // Add task to the specified column or 'todo' by default
       const column = state.columns[task.status];
       
       return {
@@ -252,11 +276,13 @@ const taskReducer = (state: BoardState, action: TaskAction): BoardState => {
       const destinationTaskIds = Array.from(destColumn.taskIds);
       destinationTaskIds.splice(newIndex, 0, taskId);
       
-      // Update the task's status
+      // Update the task's status and completion state
       const updatedTask = {
         ...state.tasks[taskId],
         status: destColId,
         updatedAt: new Date().toISOString(),
+        // If moving to done, set completedAt, otherwise clear it
+        completedAt: destColId === 'done' ? new Date().toISOString() : undefined,
       };
       
       return {
@@ -275,6 +301,33 @@ const taskReducer = (state: BoardState, action: TaskAction): BoardState => {
             ...destColumn,
             taskIds: destinationTaskIds,
           },
+        },
+      };
+    }
+    
+    case 'UPDATE_SUBTASK': {
+      const { taskId, subtaskId, completed } = action.payload;
+      const task = state.tasks[taskId];
+      
+      if (!task || !task.subtasks) return state;
+      
+      const updatedSubtasks = task.subtasks.map(subtask => 
+        subtask.id === subtaskId
+          ? { ...subtask, completed }
+          : subtask
+      );
+      
+      const updatedTask = {
+        ...task,
+        subtasks: updatedSubtasks,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      return {
+        ...state,
+        tasks: {
+          ...state.tasks,
+          [taskId]: updatedTask,
         },
       };
     }
@@ -301,7 +354,8 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return (
           task.title.toLowerCase().includes(lowercasedTerm) ||
           task.description.toLowerCase().includes(lowercasedTerm) ||
-          task.tags.some(tag => tag.name.toLowerCase().includes(lowercasedTerm))
+          task.tags.some(tag => tag.name.toLowerCase().includes(lowercasedTerm)) ||
+          task.subtasks?.some(subtask => subtask.title.toLowerCase().includes(lowercasedTerm))
         );
       })
     );

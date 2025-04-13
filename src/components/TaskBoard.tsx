@@ -4,9 +4,12 @@ import { DragDropContext, DropResult } from 'react-beautiful-dnd';
 import TaskColumn from './TaskColumn';
 import { useTaskContext } from '@/context/TaskContext';
 import TaskDialog from './TaskDialog';
+import { useTheme } from '@/context/ThemeContext';
+import { v4 as uuidv4 } from 'uuid';
 
 const TaskBoard: React.FC = () => {
   const { state, dispatch, filteredTasks } = useTaskContext();
+  const { userSettings } = useTheme();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
 
@@ -44,8 +47,19 @@ const TaskBoard: React.FC = () => {
     setIsTaskDialogOpen(false);
     setSelectedTaskId(null);
   };
+  
+  const handleAddTask = (status: string) => {
+    const newTaskId = uuidv4();
+    setSelectedTaskId(null); // This will create a new task
+    setIsTaskDialogOpen(true);
+  };
 
   const getFilteredTasksForColumn = (columnId: string) => {
+    // If user has chosen to hide completed tasks and this is the done column
+    if (!userSettings.showCompletedTasks && columnId === 'done') {
+      return [];
+    }
+    
     return state.columns[columnId].taskIds
       .filter(taskId => filteredTasks[taskId])
       .map(taskId => filteredTasks[taskId]);
@@ -54,7 +68,7 @@ const TaskBoard: React.FC = () => {
   return (
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 overflow-x-auto p-4 min-h-[calc(100vh-200px)]">
+        <div className="flex gap-4 overflow-x-auto p-2 pb-6 min-h-[calc(100vh-350px)]">
           {state.columnOrder.map((columnId, index) => {
             const column = state.columns[columnId];
             const tasks = getFilteredTasksForColumn(columnId);
@@ -66,6 +80,7 @@ const TaskBoard: React.FC = () => {
                 tasks={tasks}
                 index={index}
                 onTaskClick={handleTaskClick}
+                onAddTask={handleAddTask}
               />
             );
           })}

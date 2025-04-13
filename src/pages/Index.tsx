@@ -3,7 +3,7 @@ import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { TaskProvider } from '@/context/TaskContext';
 import LoginForm from '@/components/LoginForm';
-import TaskBoard from '@/components/TaskBoard';
+import Dashboard from '@/components/Dashboard';
 import Header from '@/components/Header';
 
 const Index = () => {
@@ -15,10 +15,10 @@ const Index = () => {
 
   return (
     <TaskProvider>
-      <div className="min-h-screen bg-slate-100">
+      <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
         <Header />
-        <main className="container mx-auto">
-          <TaskBoard />
+        <main className="container mx-auto px-4">
+          <Dashboard />
         </main>
       </div>
     </TaskProvider>
